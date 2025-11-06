@@ -7,12 +7,13 @@ class Player {
   float gravity;
   boolean onGround;
   color playerColor;
+  int type;
   
   // Controls
   int leftKey, rightKey, jumpKey;
   boolean movingLeft, movingRight, jumping;
   
-  Player(float x, float y, color c, int leftKey, int rightKey, int jumpKey) {
+  Player(float x, float y, color c, int leftKey, int rightKey, int jumpKey, int type) {
     this.pos = new PVector(x, y);
     this.wh = new PVector(30, 40);
     this.vel = new PVector(0, 0);
@@ -21,6 +22,7 @@ class Player {
     this.gravity = 0.6;
     this.onGround = false;
     this.playerColor = c;
+    this.type = type;
     
     this.leftKey = leftKey;
     this.rightKey = rightKey;
@@ -99,8 +101,8 @@ class Player {
     stroke(0);
     strokeWeight(2);
     rect(pos.x, pos.y, wh.x, wh.y);
+    // if type == 1, 2, 3, 4?
     
-    // Simple face
     fill(255);
     ellipse(pos.x + wh.x * 0.3, pos.y + wh.y * 0.3, 5, 5);
     ellipse(pos.x + wh.x * 0.7, pos.y + wh.y * 0.3, 5, 5);

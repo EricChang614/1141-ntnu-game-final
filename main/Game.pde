@@ -4,14 +4,14 @@ class Game {
   ArrayList<Platform> platforms;
   
   Game() {
-    this(1); // Default to stage 1
+    this(1, 1, 1);
   }
   
-  Game(int stage) {
+  Game(int stage, int type1, int type2) {
     // Player 1: WAD controls (A=left, D=right, W=jump)
-    player1 = new Player(100, 100, color(100, 150, 255), 'a', 'd', 'w');
+    player1 = new Player(100, 100, color(100, 150, 255), 'a', 'd', 'w', type1);
     // Player 2: Arrow keys (LEFT, RIGHT, UP)
-    player2 = new Player(600, 100, color(255, 150, 100), LEFT, RIGHT, UP);
+    player2 = new Player(600, 100, color(255, 150, 100), LEFT, RIGHT, UP, type2);
     
     // Initialize platforms
     platforms = getStageplatforms(stage);

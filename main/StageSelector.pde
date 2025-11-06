@@ -181,7 +181,7 @@ void stageSelectorKeyPressed() {
     selectedStageIndex = (selectedStageIndex + 1) % stageList.size();
   } else if (key == 'c' || key == 'C') {
     // Confirm selection and start game with selected stage
-    game = new Game(selectedStageIndex);
+    game = new Game(selectedStageIndex, player1Index, player2Index);
     uiStat = UI_GAME;
   }
 }
