@@ -50,3 +50,11 @@ class Game {
     player2.handleKeyRelease(k, kc);
   }
 }
+
+void setInvertedControls(int playerNum) {
+  if (playerNum == 1) {
+    game.player1.setInvertedControls();
+  } else if (playerNum == 2) {
+    game.player2.setInvertedControls();
+  }
+}

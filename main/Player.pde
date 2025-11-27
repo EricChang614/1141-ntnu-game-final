@@ -221,4 +221,11 @@ class Player {
       jumping = false;
     }
   }
+
+  void setInvertedControls() {
+    // 交換左右控制鍵
+    int temp = leftKey;
+    leftKey = rightKey;
+    rightKey = temp;
+  }
 }

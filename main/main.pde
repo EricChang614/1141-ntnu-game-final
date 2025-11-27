@@ -2,6 +2,8 @@ import gifAnimation.*; // 新增: 引入 GIF 動畫庫
 
 int player1Index = 0; // 玩家1選擇的角色索引
 int player2Index = 0; // 玩家2選擇的角色索引
+int specialHandleTime = 0;
+
 final int UI_NONE = 0;
 final int UI_TITLE_SCREEN = 1;
 final int UI_CHARACTER_SELECTION = 2;
@@ -29,9 +31,13 @@ void draw() {
   } else if (uiStat == UI_STAGE_SELECTION) {
     drawStageSelector(); // 繪製關卡選擇畫面(定義在 StageSelector.pde)
   } else if (uiStat == UI_GAME) {
+    handleCharacterSpecialSetting();
     background(200);
     game.update();
     game.display();
+    text("times:" + specialHandleTime,10,height - 60);
+    text("palyer1Index: " + player1Index, 10, height - 40);
+    text("palyer2Index: " + player2Index, 10, height - 20);
   } else if (uiStat == UI_STAGE_EDITOR) {
     stageEditor.update();
     stageEditor.display();
@@ -40,6 +46,11 @@ void draw() {
 
 void mousePressed() {
   if (uiStat == UI_TITLE_SCREEN) {
+    uiStat = UI_CHARACTER_SELECTION;
+    // 當離開標題畫面時停止 GIF 播放(可選,節省資源)
+    if (startBackgroundGif != null) {
+      startBackgroundGif.pause();
+    }
     handleTitleScreenClick();
   } else if (uiStat == UI_STAGE_SELECTION) {
     stageSelectorMousePressed();
@@ -79,4 +90,19 @@ void keyReleased() {
   if (uiStat == UI_GAME) {
     game.handleKeyRelease(key, keyCode);
   }
+}
+
+void handleCharacterSpecialSetting() {
+  if(specialHandleTime==0){
+    // 根據選擇的角色設定特殊屬性
+    if (player1Index == 1) {
+      game.player1.setInvertedControls();
+    }
+
+    if (player2Index == 1) {
+      game.player2.setInvertedControls();
+    }
+    specialHandleTime++;
+  }
+
 }
