@@ -75,6 +75,8 @@ class Player {
   
   void setBomberMode() {
     this.isBomberChar = true;
+    // 炸彈人移動速度設為70%
+    this.speed = this.baseSpeed * 0.7;
   }
   
   void update(ArrayList<Platform> platforms, Player otherPlayer) {
@@ -96,10 +98,33 @@ class Player {
         Bomb b = bombs.get(i);
         b.update();
         
-        // 檢查炸彈是否爆炸並影響對手
+        // 檢查炸彈是否爆炸並影響玩家
         if (b.isExploding()) {
-          float dist = dist(b.pos.x, b.pos.y, otherPlayer.pos.x + otherPlayer.wh.x/2, otherPlayer.pos.y + otherPlayer.wh.y/2);
-          if (dist < b.explosionRadius) {
+          // 檢查對自己的影響
+          float distToSelf = dist(b.pos.x, b.pos.y, pos.x + wh.x/2, pos.y + wh.y/2);
+          if (distToSelf < b.explosionRadius) {
+            // 計算擊飛方向（水平+垂直）
+            PVector knockbackSelf = new PVector(
+              pos.x + wh.x/2 - b.pos.x,
+              pos.y + wh.y/2 - b.pos.y
+            );
+            knockbackSelf.normalize();
+            
+            // 加強向上的力量，讓角色飛起來
+            if (knockbackSelf.y > 0) {
+              knockbackSelf.y -= 0.5;
+            } else {
+              knockbackSelf.y -= 0.3;
+            }
+            
+            knockbackSelf.normalize();
+            knockbackSelf.mult(30); // 增加擊飛力度
+            vel.add(knockbackSelf);
+          }
+          
+          // 檢查對對手的影響
+          float distToOther = dist(b.pos.x, b.pos.y, otherPlayer.pos.x + otherPlayer.wh.x/2, otherPlayer.pos.y + otherPlayer.wh.y/2);
+          if (distToOther < b.explosionRadius) {
             // 計算擊飛方向（水平+垂直）
             PVector knockback = new PVector(
               otherPlayer.pos.x + otherPlayer.wh.x/2 - b.pos.x,
@@ -108,7 +133,6 @@ class Player {
             knockback.normalize();
             
             // 加強向上的力量，讓角色飛起來
-            // 如果對手在炸彈上方，減少向下的力；如果在下方或同高度，增加向上的力
             if (knockback.y > 0) {
               // 對手在炸彈下方：強力向上炸飛
               knockback.y -= 0.5;
