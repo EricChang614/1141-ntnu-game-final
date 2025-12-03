@@ -3,23 +3,20 @@ class Game {
   Player player2;
   ArrayList<Platform> platforms;
   
-  Game() {
-    this(1, 1, 1);
-  }
   
   Game(int stage, int type1, int type2) {
     // Player 1: WAD controls (A=left, D=right, W=jump)
-    player1 = new Player(100, 100, color(100, 150, 255), 'a', 'd', 'w', type1);
+    player1 = new Player(100, 100, color(100, 150, 255), 'a', 'd', 'w', 'e', type1);
     // Player 2: Arrow keys (LEFT, RIGHT, UP)
-    player2 = new Player(600, 100, color(255, 150, 100), LEFT, RIGHT, UP, type2);
+    player2 = new Player(600, 100, color(255, 150, 100), LEFT, RIGHT, UP, 'k', type2);
     
     // Initialize platforms
     platforms = getStageplatforms(stage);
   }
   
   void update() {
-    player1.update(platforms);
-    player2.update(platforms);
+    player1.update(platforms, player2);
+    player2.update(platforms, player1);
   }
   
   void display() {
@@ -38,6 +35,7 @@ class Game {
     textAlign(LEFT, CENTER);
     text("Player 1 (Blue): W=Jump, A=Left, D=Right", 10, 20);
     text("Player 2 (Orange): UP=Jump, LEFT, RIGHT", 10, 40);
+    text("Shift: Chain Attack (Mic Mode)", 10, 60);
   }
   
   void handleKeyPress(char k, int kc) {
@@ -48,13 +46,5 @@ class Game {
   void handleKeyRelease(char k, int kc) {
     player1.handleKeyRelease(k, kc);
     player2.handleKeyRelease(k, kc);
-  }
-}
-
-void setInvertedControls(int playerNum) {
-  if (playerNum == 1) {
-    game.player1.setInvertedControls();
-  } else if (playerNum == 2) {
-    game.player2.setInvertedControls();
   }
 }

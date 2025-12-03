@@ -182,6 +182,7 @@ void stageSelectorKeyPressed() {
   } else if (key == 'c' || key == 'C') {
     // Confirm selection and start game with selected stage
     game = new Game(selectedStageIndex, player1Index, player2Index);
+    applyCharacterSettings();
     uiStat = UI_GAME;
   }
 }

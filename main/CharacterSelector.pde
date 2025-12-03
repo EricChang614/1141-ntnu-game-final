@@ -138,7 +138,6 @@ void characterSelectorKeyPressed() {
   } else if (key == 'c' || key == 'C') {
     uiStat = UI_STAGE_SELECTION;
   }
-  
 }
 
 void addParticles(ArrayList<Particle> particles, float x, float y, float w, float h) {
@@ -150,5 +149,20 @@ void addParticles(ArrayList<Particle> particles, float x, float y, float w, floa
       edgeY = y + (random(1) < 0.5 ? 0 : h);
     }
     particles.add(new Particle(edgeX, edgeY));
+  }
+}
+void applyCharacterSettings() {
+  // --- P1 設定 ---
+  if (player1Index == 1) { // 顛倒人
+      game.player1.setInvertedControls();
+  } else if (player1Index == 2) { // 聲控巨人
+      game.player1.setMicMode();
+  }
+  
+  // --- P2 設定 ---
+  if (player2Index == 1) { 
+      game.player2.setInvertedControls();
+  } else if (player2Index == 2) { 
+      game.player2.setMicMode();
   }
 }

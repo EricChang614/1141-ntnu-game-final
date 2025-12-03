@@ -1,8 +1,10 @@
 class Player {
   PVector pos;
   PVector wh;
+  PVector baseWh;
   PVector vel;
   float speed;
+  float baseSpeed;
   float jumpForce;
   float gravity;
   boolean onGround;
@@ -11,13 +13,31 @@ class Player {
   
   // Controls
   int leftKey, rightKey, jumpKey;
+  char hookKeyChar;
   boolean movingLeft, movingRight, jumping;
+  boolean tryingToHook;
+
+   // --- 特殊能力變數 ---
+  boolean isMicChar = false;
+  float currentScale = 1.0;
   
-  Player(float x, float y, color c, int leftKey, int rightKey, int jumpKey, int type) {
+  // 蜘蛛人鎖鏈變數
+  boolean hookActive = false; // 鎖鏈是否射出中
+  boolean isHooked = false;   // 鎖鏈是否已經勾到牆壁
+  PVector hookPos;            // 鎖鏈頭的位置 (黏在牆上的點)
+  PVector hookDir;            // 發射方向
+  float hookSpeed = 20;       // 鎖鏈飛出去的速度
+  float maxHookLen = 500;     // 鎖鏈最大長度
+  // ------------------
+
+  
+  Player(float x, float y, color c, int leftKey, int rightKey, int jumpKey, char hk, int type) {
     this.pos = new PVector(x, y);
-    this.wh = new PVector(30, 40);
+    this.baseWh = new PVector(30, 40);
+    this.wh = baseWh.copy();
     this.vel = new PVector(0, 0);
-    this.speed = 5;
+    this.baseSpeed = 5;
+    this.speed = baseSpeed;
     this.jumpForce = 12;
     this.gravity = 0.6;
     this.onGround = false;
@@ -30,21 +50,143 @@ class Player {
     this.movingLeft = false;
     this.movingRight = false;
     this.jumping = false;
+    this.hookKeyChar = hk;
+
+    this.hookPos = new PVector(0,0);
+    this.hookDir = new PVector(0,0);
+  }
+
+  void setMicMode() {
+    this.isMicChar = true;
   }
   
-  void update(ArrayList<Platform> platforms) {
-    // Horizontal movement
-    vel.x = 0;
-    if (movingLeft) {
-      vel.x = -speed;
+  void update(ArrayList<Platform> platforms, Player otherPlayer) {
+    // --- 1. 聲控大小調整 ---
+    if (isMicChar) {
+      float vol = analyzer.analyze();
+      
+      // 除錯用：你可以看下方的數值來調整門檻
+      // println("Vol:" + vol); 
+
+      // 判定是否能移動 (門檻建議設 0.1 或更高以防雜音)
+      boolean canMove = vol > 0.01; 
+      if (!canMove) {
+        movingLeft = false;
+        movingRight = false;
+        // 注意：這裡不將 jumping 設為 false，是為了讓擺盪時能保留慣性
+      }
+      
+      // ** 修改體型變化幅度 **
+      // 原本: map(vol, 0.05, 0.5, 1.0, 2.5);
+      // 修改: 讓變大更明顯，最大可達 3.0 倍，且反應更靈敏
+      float targetScale = map(vol, 0.01, 0.15, 1.0, 2.0); 
+      
+      if (targetScale < 1.0) targetScale = 1.0;
+      currentScale = lerp(currentScale, targetScale, 0.1); 
+      
+      wh.x = baseWh.x * currentScale;
+      wh.y = baseWh.y * currentScale;
+      // 變大時稍微增加重量感，速度不一定要變太快，保留操作手感
+      speed = baseSpeed * (1.0 + (currentScale - 1.0) * 0.5);
+      
+      // 踩死對手邏輯 (保持不變)
+      if (currentScale > 1.5 && checkCollision(otherPlayer)) {
+         otherPlayer.pos.set(width/2, 50);
+         otherPlayer.vel.set(0, 0);
+      }
     }
-    if (movingRight) {
-      vel.x = speed;
+
+   // --- 2. 蜘蛛人鎖鏈邏輯 ---
+    if (isMicChar) {
+      // A. 發射階段
+      if (tryingToHook && !hookActive) {
+        hookActive = true;
+        isHooked = false;
+        // 鎖鏈起始點：角色中心
+        hookPos = new PVector(pos.x + wh.x/2, pos.y + wh.y/2);
+        
+        // 決定方向：根據移動鍵，往「斜上方」發射
+        float dx = 0;
+        float dy = -1; // 預設向上
+        if (movingLeft) { dx = -1; dy = -1; }
+        else if (movingRight) { dx = 1; dy = -1; }
+        else { dx = (vel.x > 0 ? 1 : -1); dy = -1.2; } // 靜止時看慣性
+        
+        hookDir = new PVector(dx, dy).normalize();
+      }
+      
+      // B. 鎖鏈運作中
+      // [Player.pde] 的 update 函式內
+
+      // B. 鎖鏈運作中
+      if (hookActive) {
+        if (!isHooked) {
+          // --- 飛行階段 ---
+          hookPos.add(PVector.mult(hookDir, hookSpeed));
+          
+          // 1. 檢查是否碰到平台 (原本的邏輯)
+          for (Platform p : platforms) {
+            if (hookPos.x >= p.pos.x && hookPos.x <= p.pos.x + p.wh.x &&
+                hookPos.y >= p.pos.y && hookPos.y <= p.pos.y + p.wh.y) {
+              isHooked = true;
+              break;
+            }
+          }
+          
+          // 2. (新增) 檢查是否碰到視窗邊界 (牆壁、天花板、地板)
+          if (!isHooked) { // 如果還沒抓到平台，才檢查牆壁
+            if (hookPos.x <= 0 || hookPos.x >= width || hookPos.y <= 0 || hookPos.y >= height) {
+              isHooked = true;
+              
+              // 修正位置：讓鎖鏈頭停在邊界上，不要飛出去
+              if (hookPos.x < 0) hookPos.x = 0;
+              if (hookPos.x > width) hookPos.x = width;
+              if (hookPos.y < 0) hookPos.y = 0;
+              if (hookPos.y > height) hookPos.y = height;
+            }
+          }
+          
+          // 如果太遠都沒抓到，就自動收回
+          if (dist(pos.x, pos.y, hookPos.x, hookPos.y) > maxHookLen) {
+            hookActive = false;
+          }
+          
+        } else {
+          // --- 擺盪/拉扯階段 (保持原本邏輯) ---
+          PVector pullDir = PVector.sub(hookPos, new PVector(pos.x + wh.x/2, pos.y + wh.y/2));
+          float distance = pullDir.mag(); // 算出距離
+          pullDir.normalize();
+          
+          // 這邊可以微調拉力手感
+          // 距離越遠拉力越大，這樣抓到天花板時會像盪鞦韆一樣
+          float pullForce = 0.8; 
+          vel.add(pullDir.mult(pullForce));
+          
+          vel.y *= 0.98; 
+          vel.limit(20); // 稍微放寬最大速度限制，讓擺盪更爽快
+        }
+      
+        // C. 鬆開按鍵 -> 斷開鎖鏈 (保留慣性)
+        if (!tryingToHook) {
+          hookActive = false;
+          isHooked = false;
+        }
+      }
     }
-    
-    // Apply gravity
+    // -------------------------
+    // 一般物理運動 (若被鎖鏈拉，vel 已經被改變了)
+    if (!isHooked) { 
+      // 沒用鎖鏈時才完全由按鍵控制左右速度 (否則會破壞擺盪慣性)
+      // 我們加上一個緩衝，如果是擺盪後剛放開，不要馬上把 vel.x 歸零
+      if (movingLeft) vel.x = -speed;
+      else if (movingRight) vel.x = speed;
+      else if (onGround) vel.x *= 0.8; // 地面摩擦力
+      else vel.x *= 0.98; // 空氣阻力
+    }
+
     vel.y += gravity;
-    
+    if (vel.y > 15) vel.y = 15;
+
     // Limit fall speed
     if (vel.y > 15) {
       vel.y = 15;
@@ -73,10 +215,12 @@ class Player {
         // Coming from left
         if (vel.x > 0 && pos.x + wh.x > p.pos.x && pos.x < p.pos.x) {
           pos.x = p.pos.x - wh.x;
+          vel.x = 0;
         }
         // Coming from right
         else if (vel.x < 0 && pos.x < p.pos.x + p.wh.x && pos.x + wh.x > p.pos.x + p.wh.x) {
           pos.x = p.pos.x + p.wh.x;
+          vel.x = 0;
         }
         // Bottom collision (hitting head)
         else if (vel.y < 0 && pos.y < p.pos.y + p.wh.y && pos.y + wh.y > p.pos.y + p.wh.y) {
@@ -94,7 +238,26 @@ class Player {
       vel.y = 0;
       onGround = true;
     }
+    // 邊界
+    if (pos.x < 0) {
+      pos.x = 0; vel.x = 0;
+    }
+    if (pos.x + wh.x > width) {
+      pos.x = width - wh.x;
+      vel.x = 0;
+    }
+    if (pos.y + wh.y > height) {
+      pos.y = height - wh.y;
+      vel.y = 0;
+      onGround = true;
+    }
   }
+
+  boolean checkCollision(Player other) {
+    return !(pos.x + wh.x < other.pos.x || pos.x > other.pos.x + other.wh.x || 
+             pos.y + wh.y < other.pos.y || pos.y > other.pos.y + other.wh.y);
+  }
+
   
   void display() {
     // Draw body
@@ -196,6 +359,16 @@ class Player {
       ellipse(pos.x + wh.x * 0.3, pos.y + wh.y * 0.3, 5, 5);
       ellipse(pos.x + wh.x * 0.7, pos.y + wh.y * 0.3, 5, 5);
     }
+    
+    // 繪製鎖鏈
+    if (hookActive) {
+      stroke(200, 50, 50); // 紅色蜘蛛絲
+      strokeWeight(3);
+      line(pos.x + wh.x/2, pos.y + wh.y/2, hookPos.x, hookPos.y);
+      fill(0);
+      noStroke();
+      ellipse(hookPos.x, hookPos.y, 8, 8); // 鎖鏈頭
+    }
   }
   
   void handleKeyPress(int k, int kc) {
@@ -207,6 +380,15 @@ class Player {
     }
     if (k == jumpKey || kc == jumpKey) {
       jumping = true;
+    }
+    // 改用 key (char) 判斷，為了支援 'e' 和 'k'
+    if (k == leftKey || kc == leftKey) movingLeft = true;
+    if (k == rightKey || kc == rightKey) movingRight = true;
+    if (k == jumpKey || kc == jumpKey) jumping = true;
+    
+    // 檢查是否按下鎖鏈鍵 (不分大小寫)
+    if (isMicChar && (Character.toLowerCase((char)k) == hookKeyChar)) {
+      tryingToHook = true;
     }
   }
   
@@ -220,6 +402,14 @@ class Player {
     if (k == jumpKey || kc == jumpKey) {
       jumping = false;
     }
+    if (k == leftKey || kc == leftKey) movingLeft = false;
+    if (k == rightKey || kc == rightKey) movingRight = false;
+    if (k == jumpKey || kc == jumpKey) jumping = false;
+    
+    // 放開鎖鏈鍵
+    if (isMicChar && (Character.toLowerCase((char)k) == hookKeyChar)) {
+      tryingToHook = false;
+     }
   }
 
   void setInvertedControls() {

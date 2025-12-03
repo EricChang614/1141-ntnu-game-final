@@ -1,8 +1,14 @@
 import gifAnimation.*; // 新增: 引入 GIF 動畫庫
+import processing.sound.*; // 新增的聲音庫
 
 int player1Index = 0; // 玩家1選擇的角色索引
 int player2Index = 0; // 玩家2選擇的角色索引
-int specialHandleTime = 0;
+
+/*
+角色列表:
+1: 上下左右顛倒
+2: 聲控巨人 (新增)
+*/
 
 final int UI_NONE = 0;
 final int UI_TITLE_SCREEN = 1;
@@ -14,13 +20,22 @@ int uiStat = 1;
 Game game;
 StageEditor stageEditor;
 
+// 聲音相關變數
+AudioIn input;
+Amplitude analyzer;
+
+
 void setup() {
   size(960, 540); // 螢幕大小
   setupTitleScreen(); // 初始化遊戲開始畫面(定義在 GameStart.pde)
   setupCharacterSelection(); // 初始化角色選擇(定義在 CharacterSelection.pde)
   setupStageSelector(); // 初始化關卡選擇(定義在 StageSelector.pde)
-   //game = new Game();
   stageEditor = new StageEditor(); // 初始化關卡編輯器
+   // 初始化聲音
+  input = new AudioIn(this, 0);
+  input.start();
+  analyzer = new Amplitude(this);
+  analyzer.input(input);
 }
 
 void draw() {
@@ -31,11 +46,10 @@ void draw() {
   } else if (uiStat == UI_STAGE_SELECTION) {
     drawStageSelector(); // 繪製關卡選擇畫面(定義在 StageSelector.pde)
   } else if (uiStat == UI_GAME) {
-    handleCharacterSpecialSetting();
     background(200);
     game.update();
     game.display();
-    text("times:" + specialHandleTime,10,height - 60);
+    // 顯示除錯資訊
     text("palyer1Index: " + player1Index, 10, height - 40);
     text("palyer2Index: " + player2Index, 10, height - 20);
   } else if (uiStat == UI_STAGE_EDITOR) {
@@ -90,19 +104,4 @@ void keyReleased() {
   if (uiStat == UI_GAME) {
     game.handleKeyRelease(key, keyCode);
   }
-}
-
-void handleCharacterSpecialSetting() {
-  if(specialHandleTime==0){
-    // 根據選擇的角色設定特殊屬性
-    if (player1Index == 1) {
-      game.player1.setInvertedControls();
-    }
-
-    if (player2Index == 1) {
-      game.player2.setInvertedControls();
-    }
-    specialHandleTime++;
-  }
-
 }
