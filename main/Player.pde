@@ -100,13 +100,25 @@ class Player {
         if (b.isExploding()) {
           float dist = dist(b.pos.x, b.pos.y, otherPlayer.pos.x + otherPlayer.wh.x/2, otherPlayer.pos.y + otherPlayer.wh.y/2);
           if (dist < b.explosionRadius) {
-            // 計算擊飛方向
+            // 計算擊飛方向（水平+垂直）
             PVector knockback = new PVector(
               otherPlayer.pos.x + otherPlayer.wh.x/2 - b.pos.x,
               otherPlayer.pos.y + otherPlayer.wh.y/2 - b.pos.y
             );
             knockback.normalize();
-            knockback.mult(25); // 擊飛力度
+            
+            // 加強向上的力量，讓角色飛起來
+            // 如果對手在炸彈上方，減少向下的力；如果在下方或同高度，增加向上的力
+            if (knockback.y > 0) {
+              // 對手在炸彈下方：強力向上炸飛
+              knockback.y -= 0.5;
+            } else {
+              // 對手在炸彈上方或同高度：也給予向上的力
+              knockback.y -= 0.3;
+            }
+            
+            knockback.normalize();
+            knockback.mult(30); // 增加擊飛力度
             otherPlayer.vel.add(knockback);
           }
         }
